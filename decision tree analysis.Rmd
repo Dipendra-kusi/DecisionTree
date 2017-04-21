@@ -1,0 +1,210 @@
+---
+title: "Iris Data Analysis and Model Design"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+
+Load iris data
+```{r}
+attach(iris)
+head(iris)
+```
+
+
+Using iris data to predict the Species from sepal width, height and petal width and height
+```{r qplot, message=FALSE}
+
+#first check the structure
+print(str(iris))
+```
+
+
+```{r message=FALSE}
+# set seed so that same result can be replicated
+set.seed(1234)
+```
+
+```{r message=FALSE}
+# get random sample data 
+ind <- sample(2,nrow(iris),replace = TRUE,
+              prob=c(0.7,0.3))
+```
+```{r message=FALSE}		  
+# check the structure			  
+str(ind)
+table(ind)
+```
+
+```{r message=FALSE}
+# split data into training and testing data
+trainingData <- iris[ind==1,]
+testData <- iris[ind==2,]
+```
+
+```{r results='hide', message=FALSE, warning=FALSE}
+### using ctree
+library(party)
+```
+
+```{r results='hide', message=FALSE, warning=FALSE}
+# model design for predecting Species which is dependent variable
+# with independent variable Sepal.Length, Sepal.Width, Petal.Length, Petal.Width
+myPredFormula <- Species ~ Sepal.Length + Sepal.Width
++ Petal.Length + Petal.Width
+```
+
+```{r results='hide', message=FALSE, warning=FALSE}
+# using ctree 
+iris_ctree <- ctree(myPredFormula,data=trainingData)
+```
+
+```{r message=FALSE, warning=FALSE}
+# predict the species with created model
+# and see confusion matrix
+table(predict(iris_ctree),trainingData$Species)
+```
+
+
+```{r results='hide', message=FALSE, warning=FALSE}
+trainingDataPrd <- data.frame(trainingData,predicted=predict(iris_ctree))
+trainingDataPrd$Checker <- trainingDataPrd$Species==trainingDataPrd$predicted
+
+```
+
+```{r  message=FALSE, warning=FALSE}
+head(trainingDataPrd,6)
+
+print(iris_ctree)
+
+plot(iris_ctree)
+
+plot(iris_ctree,type="simple")
+
+```
+
+```{r message=FALSE, warning=FALSE}
+## test the model with test data
+testPred <- predict(iris_ctree,newdata=testData)
+
+table(testPred,testData$Species)
+##iris[order(Sepal.Length),]
+```
+
+
+### Using Rpart
+
+```{r message=FALSE, warning=FALSE}
+#install.packages("rpart")
+#install.packages("rpart.plot")
+require(rpart)
+require(rpart.plot)
+```
+
+```{r message=FALSE, warning=FALSE}
+predTrainingRPart <-rpart(myPredFormula,data=trainingData,method="class")
+
+rpart.plot(predTrainingRPart)
+
+rpart.plot(predTrainingRPart, type=3, extra=101,
+           fallen.leaves=T)
+```
+
+```{r message=FALSE, warning=FALSE}
+# check summary
+summary(predTrainingRPart)
+```
+
+```{r message=FALSE, warning=FALSE}
+# predict
+predTestRPart<-predict(predTrainingRPart, testData ,type="class")
+
+# see confusion matrix
+table(testData$Species,predTestRPart)
+```
+
+
+
+
+```{r message=FALSE, warning=FALSE}
+### using tree model
+#install.packages("tree")
+require(tree)
+tree_model = tree(myPredFormula,trainingData)
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# plot model
+plot.new()
+plot(tree_model)
+text(tree_model,pretty = 0)
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# design model and predict
+tree_pred <- predict(tree_model,testData,type="class")
+table(tree_pred,testData$Species)
+
+```
+
+
+
+```{r message=FALSE, warning=FALSE}
+# check confusion matrix
+#confusionMatrix(table(testData$Species,tree_pred))
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# set seed val
+set.seed(190)
+
+```
+
+```{r message=FALSE, warning=FALSE}
+cv_tree_prue <- cv.tree(tree_model,FUN=prune.misclass)
+names(cv_tree_prue)
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# see the level where we can prune the tree
+plot(cv_tree_prue$size,cv_tree_prue$dev,type="b")
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# prune the tree
+pruned_model <- prune.misclass(tree_model,best=5)
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# design model
+tree_pred_prune <- predict(pruned_model,testData,type="class")
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# check accuracy
+table(tree_pred_prune,testData$Species)
+
+#confusionMatrix(table(tree_pred_prune,testData$Species))
+
+```
+
+
+
+
+
+
